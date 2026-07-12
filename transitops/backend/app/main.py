@@ -2,8 +2,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .database import Base, engine
-from .routers import auth as auth_router
-from .routers import vehicles, drivers, trips, maintenance, fuel, dashboard, reports
+from .routers import auth as auth_router, dashboard, drivers, fuel, maintenance, reports, trips
+from .routers import vehicles
 
 Base.metadata.create_all(bind=engine)
 

@@ -1,7 +1,9 @@
 import datetime as dt
 
+from . import auth
+
 from .database import SessionLocal, engine, Base
-from . import models, auth
+from . import models
 
 Base.metadata.create_all(bind=engine)
 
