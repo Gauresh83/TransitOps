@@ -26,6 +26,16 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class DriverSignup(BaseModel):
+    name: str
+    email: EmailStr
+    password: str
+    license_number: str
+    license_category: str = "LMV"
+    license_expiry: dt.date
+    contact_number: str = ""
+
+
 class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
@@ -95,6 +105,7 @@ class DriverOut(BaseModel):
     contact_number: str
     safety_score: float
     status: DriverStatus
+    user_id: Optional[int] = None
 
 
 # ---------- Trip ----------
@@ -144,6 +155,12 @@ class MaintenanceCreate(BaseModel):
     cost: float = 0
 
 
+class MaintenanceReportCreate(BaseModel):
+    vehicle_id: int
+    issue: str
+    description: str = ""
+
+
 class MaintenanceUpdate(BaseModel):
     status: Optional[MaintenanceStatus] = None
     cost: Optional[float] = None
@@ -158,6 +175,7 @@ class MaintenanceOut(BaseModel):
     description: str
     cost: float
     status: MaintenanceStatus
+    reported_by_driver_id: Optional[int] = None
     opened_at: dt.datetime
     closed_at: Optional[dt.datetime] = None
     vehicle: Optional[VehicleOut] = None

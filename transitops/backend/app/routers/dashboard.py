@@ -3,9 +3,8 @@ from collections import defaultdict
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from .. import auth
 
-from .. import models
+from .. import models, auth
 from ..database import get_db
 
 router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])

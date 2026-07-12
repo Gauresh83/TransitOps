@@ -1,9 +1,7 @@
 import datetime as dt
 
-from . import auth
-
 from .database import SessionLocal, engine, Base
-from . import models
+from . import models, auth
 
 Base.metadata.create_all(bind=engine)
 
@@ -60,6 +58,34 @@ def seed():
         db.add_all(drivers)
         db.commit()
 
+        # Give one existing driver a login so the driver portal can be demoed end-to-end.
+        rahul_user = models.User(
+            name="Rahul Yadav", email="driver@transitops.io", role=models.Role.driver,
+            password_hash=auth.hash_password("driver123"),
+        )
+        db.add(rahul_user)
+        db.commit()
+        db.refresh(rahul_user)
+        drivers[0].user_id = rahul_user.id
+        db.commit()
+
+        # A pending driver application, to demo the fleet manager approval workflow.
+        applicant_user = models.User(
+            name="Sanjay Gupta", email="sanjay.driver@transitops.io", role=models.Role.driver,
+            password_hash=auth.hash_password("sanjay123"),
+        )
+        db.add(applicant_user)
+        db.commit()
+        db.refresh(applicant_user)
+        applicant_driver = models.Driver(
+            name="Sanjay Gupta", license_number="UP14-2023-0099812",
+            license_expiry=dt.datetime.utcnow() + dt.timedelta(days=500),
+            contact_number="+91 90000 11223", safety_score=100,
+            status=models.DriverStatus.pending, user_id=applicant_user.id,
+        )
+        db.add(applicant_driver)
+        db.commit()
+
         maintenance = models.MaintenanceLog(
             vehicle_id=vehicles[3].id, issue="Oil Leakage",
             description="Engine oil leak reported by driver after last trip.",
@@ -83,6 +109,8 @@ def seed():
         print("           fleet@transitops.io / fleet123")
         print("           safety@transitops.io / safety123")
         print("           finance@transitops.io / finance123")
+        print("           driver@transitops.io / driver123   (approved driver, Rahul Yadav)")
+        print("           sanjay.driver@transitops.io / sanjay123   (pending approval)")
     finally:
         db.close()
 

@@ -2,14 +2,25 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from .. import auth, models
 
-from .. import schemas
+from .. import models, schemas, auth
 from ..database import get_db
 
 router = APIRouter(prefix="/api/drivers", tags=["drivers"])
 
 MANAGE_ROLES = ["fleet_manager", "safety_officer"]
+APPROVAL_ROLES = ["fleet_manager"]
+
+
+@router.get("/me", response_model=schemas.DriverOut)
+def get_my_driver_profile(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.require_roles("driver")),
+):
+    driver = db.query(models.Driver).filter(models.Driver.user_id == current_user.id).first()
+    if not driver:
+        raise HTTPException(status_code=404, detail="Driver profile not found")
+    return driver
 
 
 @router.get("", response_model=List[schemas.DriverOut])
@@ -75,5 +86,42 @@ def delete_driver(
     if active_trip:
         raise HTTPException(status_code=400, detail="Cannot delete a driver who is on an active trip")
     db.delete(driver)
+    db.commit()
+    return {"ok": True}
+
+
+@router.put("/{driver_id}/approve", response_model=schemas.DriverOut)
+def approve_driver(
+    driver_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.require_roles(*APPROVAL_ROLES)),
+):
+    driver = db.query(models.Driver).get(driver_id)
+    if not driver:
+        raise HTTPException(status_code=404, detail="Driver not found")
+    if driver.status != models.DriverStatus.pending:
+        raise HTTPException(status_code=400, detail="This driver is not awaiting approval")
+    driver.status = models.DriverStatus.available
+    db.commit()
+    db.refresh(driver)
+    return driver
+
+
+@router.delete("/{driver_id}/reject")
+def reject_driver(
+    driver_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.require_roles(*APPROVAL_ROLES)),
+):
+    driver = db.query(models.Driver).get(driver_id)
+    if not driver:
+        raise HTTPException(status_code=404, detail="Driver not found")
+    if driver.status != models.DriverStatus.pending:
+        raise HTTPException(status_code=400, detail="Only pending applications can be rejected")
+
+    linked_user = db.query(models.User).get(driver.user_id) if driver.user_id else None
+    db.delete(driver)
+    if linked_user:
+        db.delete(linked_user)
     db.commit()
     return {"ok": True}

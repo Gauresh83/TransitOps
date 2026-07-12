@@ -14,6 +14,7 @@ class Role(str, enum.Enum):
     fleet_manager = "fleet_manager"
     safety_officer = "safety_officer"
     financial_analyst = "financial_analyst"
+    driver = "driver"
 
 
 class VehicleStatus(str, enum.Enum):
@@ -24,6 +25,7 @@ class VehicleStatus(str, enum.Enum):
 
 
 class DriverStatus(str, enum.Enum):
+    pending = "pending"
     available = "available"
     on_trip = "on_trip"
     off_duty = "off_duty"
@@ -83,9 +85,11 @@ class Driver(Base):
     contact_number = Column(String, default="")
     safety_score = Column(Float, default=100)
     status = Column(Enum(DriverStatus), default=DriverStatus.available)
+    user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=True)
     created_at = Column(DateTime, default=dt.datetime.utcnow)
 
     trips = relationship("Trip", back_populates="driver")
+    user = relationship("User", backref="driver_profile")
 
 
 class Trip(Base):
@@ -120,10 +124,12 @@ class MaintenanceLog(Base):
     description = Column(String, default="")
     cost = Column(Float, default=0)
     status = Column(Enum(MaintenanceStatus), default=MaintenanceStatus.open)
+    reported_by_driver_id = Column(Integer, ForeignKey("drivers.id"), nullable=True)
     opened_at = Column(DateTime, default=dt.datetime.utcnow)
     closed_at = Column(DateTime, nullable=True)
 
     vehicle = relationship("Vehicle", back_populates="maintenance_logs")
+    reported_by_driver = relationship("Driver")
 
 
 class FuelLog(Base):

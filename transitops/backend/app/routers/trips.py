@@ -3,9 +3,8 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
-from .. import auth, models
 
-from .. import schemas
+from .. import models, schemas, auth
 from ..database import get_db
 
 router = APIRouter(prefix="/api/trips", tags=["trips"])
@@ -15,6 +14,19 @@ DISPATCH_ROLES = ["fleet_manager"]
 
 def _with_relations(q):
     return q.options(joinedload(models.Trip.vehicle), joinedload(models.Trip.driver))
+
+
+@router.get("/mine", response_model=List[schemas.TripOut])
+def list_my_trips(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.require_roles("driver")),
+):
+    driver = db.query(models.Driver).filter(models.Driver.user_id == current_user.id).first()
+    if not driver:
+        return []
+    return _with_relations(db.query(models.Trip)).filter(
+        models.Trip.driver_id == driver.id
+    ).order_by(models.Trip.id.desc()).all()
 
 
 @router.get("", response_model=List[schemas.TripOut])
